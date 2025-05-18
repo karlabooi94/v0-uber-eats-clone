@@ -8,10 +8,24 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ classNa
   return (
     <textarea
       className={cn(
-        "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex max-h-[120px] min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-auto",
         className,
       )}
       ref={ref}
+      onWheel={(e) => {
+        // Only prevent default if the textarea is at the bottom or top edge
+        const textarea = e.currentTarget
+        const isAtBottom = textarea.scrollHeight - textarea.scrollTop === textarea.clientHeight
+        const isAtTop = textarea.scrollTop === 0
+
+        if ((isAtBottom && e.deltaY > 0) || (isAtTop && e.deltaY < 0)) {
+          // Let the parent container handle the scroll
+          e.stopPropagation()
+        } else {
+          // Otherwise, let the textarea scroll internally
+          e.stopPropagation()
+        }
+      }}
       {...props}
     />
   )

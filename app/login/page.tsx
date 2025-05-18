@@ -1,18 +1,35 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import LoginModal from "@/components/login-modal"
 import { Button } from "@/components/ui/button"
 
 export default function LoginPage() {
-  const { user } = useAuth()
+  const { user, isTestMode, toggleTestMode } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   const redirect = searchParams.get("redirect") || "/dashboard"
   const action = searchParams.get("action")
+
+  // If test mode is enabled, automatically sign in and redirect
+  useEffect(() => {
+    if (isTestMode && !user) {
+      console.log("🧪 Test mode active: Auto-signing in")
+      toggleTestMode(true) // This will set the test user
+      setIsRedirecting(true)
+
+      // Short delay to ensure the user state is updated
+      const timer = setTimeout(() => {
+        router.push(redirect)
+      }, 500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [isTestMode, user, router, redirect, toggleTestMode])
 
   // If user is already logged in, redirect
   useEffect(() => {
@@ -43,9 +60,17 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white shadow-md rounded-lg p-6">
-          <LoginModal redirectTo={redirect} action={action || undefined}>
-            <Button className="w-full">Click here to sign in</Button>
-          </LoginModal>
+          {isTestMode ? (
+            <div className="text-center">
+              <p className="mb-4 text-yellow-600 font-medium">🧪 Test Mode Active</p>
+              <p className="mb-4">Automatically signing in as Ben Booi...</p>
+              <div className="animate-pulse bg-gray-200 h-10 w-full rounded"></div>
+            </div>
+          ) : (
+            <LoginModal redirectTo={redirect} action={action || undefined}>
+              <Button className="w-full">Click here to sign in</Button>
+            </LoginModal>
+          )}
         </div>
       </div>
     </div>

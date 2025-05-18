@@ -21,7 +21,17 @@ export default function OrderSidebar({ chef }: OrderSidebarProps) {
 
     // Simulate a small delay for better UX
     setTimeout(() => {
-      updateQuantity(id, newQuantity)
+      if (newQuantity <= 0) {
+        // If quantity is 0 or less, remove the item completely
+        const itemToRemove = items.find((item) => item.id === id)
+        if (itemToRemove) {
+          removeFromOrder(id)
+          showToast(`${itemToRemove.name} removed from your order`, "info")
+        }
+      } else {
+        // Otherwise update the quantity
+        updateQuantity(id, newQuantity)
+      }
       setIsUpdating(null)
     }, 300)
   }
@@ -72,7 +82,7 @@ export default function OrderSidebar({ chef }: OrderSidebarProps) {
                 variant="outline"
                 size="icon"
                 className="h-6 w-6 rounded-full p-0"
-                onClick={() => handleUpdateQuantity(item.id, Math.max(1, (item.quantity || 1) - 1))}
+                onClick={() => handleUpdateQuantity(item.id, (item.quantity || 1) - 1)}
                 disabled={isUpdating === item.id}
               >
                 <Minus className="h-3 w-3" />

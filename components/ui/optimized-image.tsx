@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { normalizeImagePath, generatePlaceholder } from "@/utils/image-helpers"
+import { normalizeImagePath } from "@/utils/image-helpers"
 
 interface OptimizedImageProps {
   src: string
@@ -35,6 +35,13 @@ export function OptimizedImage({
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 2
 
+  // Generate a placeholder URL
+  const generatePlaceholder = (width: number, height: number, query = "image") => {
+    // Make the placeholder more specific by including a timestamp to prevent caching
+    const uniqueId = Date.now().toString().slice(-6)
+    return `/placeholder.svg?height=${height}&width=${width}&query=${encodeURIComponent(query)}&id=${uniqueId}`
+  }
+
   // Normalize the image path on component mount and when src changes
   useEffect(() => {
     try {
@@ -50,9 +57,11 @@ export function OptimizedImage({
         return
       }
 
-      // Normalize the path
-      const normalized = normalizeImagePath(src)
-      console.log(`Normalized image path: ${src} -> ${normalized}`)
+      // Generate a unique cache-busting parameter to prevent image reuse
+      const cacheBuster = `?v=${Date.now().toString().slice(-6)}`
+
+      // Normalize the path and add cache buster
+      const normalized = normalizeImagePath(src) + cacheBuster
       setImgSrc(normalized)
     } catch (error) {
       console.error("Error normalizing image path:", error)
@@ -67,15 +76,14 @@ export function OptimizedImage({
     if (retryCount < maxRetries) {
       // Try with a different path format
       const newSrc = src.startsWith("/") ? src.substring(1) : `/${src}`
-      console.log(`Retrying with: ${newSrc}`)
-      setImgSrc(normalizeImagePath(newSrc))
+      const cacheBuster = `?v=${Date.now().toString().slice(-6)}`
+      setImgSrc(normalizeImagePath(newSrc) + cacheBuster)
       setRetryCount(retryCount + 1)
     } else {
       console.error(`Failed to load image after ${maxRetries} retries: ${src}`)
 
-      // Use provided fallback or generate a placeholder
-      const fallback = fallbackSrc || generatePlaceholder(width, height, `Failed to load: ${alt}`)
-      console.log(`Using fallback: ${fallback}`)
+      // Use provided fallback or generate a placeholder with more specific alt text
+      const fallback = fallbackSrc || generatePlaceholder(width, height, `${alt} (failed to load)`)
       setImgSrc(fallback)
       setHasError(true)
       if (onError) onError()
@@ -100,7 +108,7 @@ export function OptimizedImage({
 
       {/* Use next/image for optimized images */}
       <Image
-        src={imgSrc || "/placeholder.svg?height=400&width=400&query=image"}
+        src={imgSrc || generatePlaceholder(width, height, alt)}
         alt={alt}
         width={width}
         height={height}
@@ -113,11 +121,12 @@ export function OptimizedImage({
           transition: "opacity 0.3s ease-in-out",
         }}
         className={`${hasError ? "border border-red-300" : ""}`}
+        unoptimized={true} // Add this to bypass Next.js image optimization which might be causing caching issues
       />
 
       {hasError && (
-        <div className="absolute bottom-0 left-0 right-0 bg-red-50 text-red-600 text-xs p-1 text-center">
-          Image failed to load
+        <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-600 text-xs p-1 text-center">
+          Failed to load: {src.split("/").pop()}
         </div>
       )}
     </div>

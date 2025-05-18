@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/use-auth"
 import { CartProvider } from "@/hooks/use-cart"
 import { ToastProvider } from "@/hooks/use-toast"
 import ImagePreloader from "@/components/image-preloader"
+import { TestModeToggle } from "@/components/test-mode-toggle"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -52,6 +53,7 @@ export default function RootLayout({
                 <OrderProvider>
                   <ImagePreloader imagePaths={criticalImages} />
                   {children}
+                  <TestModeToggle />
                 </OrderProvider>
               </CartProvider>
             </ToastProvider>

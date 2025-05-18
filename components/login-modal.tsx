@@ -5,28 +5,33 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/hooks/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CheckIcon, XIcon, EyeIcon, EyeOffIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 interface LoginModalProps {
   children: React.ReactNode
   redirectTo?: string
   isCheckout?: boolean
   action?: string
+  redirectUrl?: string
 }
 
-export default function LoginModal({ children, redirectTo, isCheckout = false, action }: LoginModalProps) {
+export default function LoginModal({ children, redirectTo, isCheckout = false, action, redirectUrl }: LoginModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("login")
   const router = useRouter()
-  const { login } = useAuth()
+  const { login, isTestMode } = useAuth()
 
   // Store cart items before login
   const [storedCartItems, setStoredCartItems] = useState<any[]>([])
@@ -38,6 +43,8 @@ export default function LoginModal({ children, redirectTo, isCheckout = false, a
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [error, setError] = useState("")
+  const [isOpen, setIsOpen] = useState(false)
 
   // Validation states
   const [emailValid, setEmailValid] = useState<boolean | null>(null)
@@ -149,8 +156,8 @@ export default function LoginModal({ children, redirectTo, isCheckout = false, a
       // Simulate successful login
       const userData = {
         id: "user123",
-        name: username || "John Doe",
-        email: email || "john.doe@example.com",
+        name: username || "Ben Booi",
+        email: email || "ben.booi@example.com",
         avatar: "/user-avatar.png",
       }
 
@@ -204,7 +211,7 @@ export default function LoginModal({ children, redirectTo, isCheckout = false, a
       // Simulate successful login
       const userData = {
         id: "user123",
-        name: "John Doe",
+        name: "Ben Booi",
         email: email,
         avatar: "/user-avatar.png",
       }
@@ -224,315 +231,104 @@ export default function LoginModal({ children, redirectTo, isCheckout = false, a
     return "Log in or sign up"
   }
 
+  // If test mode is enabled, clicking the login button should just redirect
+  // without showing the modal
+  const handleClick = () => {
+    if (isTestMode) {
+      console.log("🧪 Test mode enabled - Bypassing login modal")
+
+      // Redirect based on the same logic as successful login
+      if (isCheckout) {
+        router.push("/checkout")
+      } else if (redirectTo) {
+        router.push(redirectTo)
+      } else {
+        router.push("/dashboard")
+      }
+
+      return
+    }
+
+    // Normal behavior - open the modal
+    setOpen(true)
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      // const result = await login(email, password)
+      const result = { success: true, message: "" } // Mock result for now
+
+      if (result.success) {
+        setIsOpen(false)
+        if (redirectUrl) {
+          router.push(redirectUrl)
+        }
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // If in test mode and there's a redirect URL, go there directly
+  const handleOpenChange = (open: boolean) => {
+    if (isTestMode && redirectUrl && open) {
+      router.push(redirectUrl)
+      return
+    }
+    setIsOpen(open)
+  }
+
   return (
-    <>
-      <div onClick={() => setOpen(true)}>{children}</div>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Log in to your account</DialogTitle>
+          <DialogDescription>Enter your email and password to access your account.</DialogDescription>
+        </DialogHeader>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold">{getTitle()}</DialogTitle>
-          </DialogHeader>
-
-          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-login">Email</Label>
-                  <Input
-                    id="email-login"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label htmlFor="password-login">Password</Label>
-                    <a href="#" className="text-xs text-blue-600 hover:underline">
-                      Forgot password?
-                    </a>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password-login"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                    >
-                      {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button className="w-full" onClick={handleEmailLogin} disabled={isLoading}>
-                  {isLoading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-                  ) : (
-                    "Login with Email"
-                  )}
-                </Button>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-gray-500">or</span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 border-2 py-6"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-                ) : (
-                  <img src="/google-logo.png" alt="Google" className="h-5 w-5" />
-                )}
-                <span>Continue with Google</span>
-              </Button>
-
-              <p className="text-center text-sm text-gray-500">
-                Don't have an account?{" "}
-                <button className="text-blue-600 hover:underline" onClick={() => setActiveTab("signup")}>
-                  Sign up
-                </button>
-              </p>
-            </TabsContent>
-
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username-signup">Username</Label>
-                  <div className="relative">
-                    <Input
-                      id="username-signup"
-                      type="text"
-                      placeholder="johndoe"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className={cn(
-                        usernameValid === false && "border-red-500",
-                        usernameValid === true && "border-green-500",
-                      )}
-                    />
-                    {usernameValid !== null && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {usernameValid ? (
-                          <CheckIcon className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <XIcon className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {usernameValid === false && (
-                    <p className="text-xs text-red-500">Username must be at least 3 characters</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email-signup">Email</Label>
-                  <div className="relative">
-                    <Input
-                      id="email-signup"
-                      type="email"
-                      placeholder="your.email@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={cn(
-                        emailValid === false && "border-red-500",
-                        emailValid === true && "border-green-500",
-                      )}
-                    />
-                    {emailValid !== null && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {emailValid ? (
-                          <CheckIcon className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <XIcon className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {emailValid === false && <p className="text-xs text-red-500">Please enter a valid email address</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password-signup">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password-signup"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={cn(
-                        passwordStrength === "weak" && "border-red-500",
-                        passwordStrength === "medium" && "border-yellow-500",
-                        passwordStrength === "strong" && "border-green-500",
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                    >
-                      {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                    </button>
-                  </div>
-                  {passwordStrength && (
-                    <div className="space-y-1">
-                      <div className="flex gap-1 h-1">
-                        <div
-                          className={cn(
-                            "flex-1 rounded-full",
-                            passwordStrength === "weak"
-                              ? "bg-red-500"
-                              : passwordStrength === "medium"
-                                ? "bg-yellow-500"
-                                : "bg-green-500",
-                          )}
-                        />
-                        <div
-                          className={cn(
-                            "flex-1 rounded-full",
-                            passwordStrength === "weak"
-                              ? "bg-gray-200"
-                              : passwordStrength === "medium"
-                                ? "bg-yellow-500"
-                                : "bg-green-500",
-                          )}
-                        />
-                        <div
-                          className={cn(
-                            "flex-1 rounded-full",
-                            passwordStrength === "strong" ? "bg-green-500" : "bg-gray-200",
-                          )}
-                        />
-                      </div>
-                      <p
-                        className={cn(
-                          "text-xs",
-                          passwordStrength === "weak"
-                            ? "text-red-500"
-                            : passwordStrength === "medium"
-                              ? "text-yellow-600"
-                              : "text-green-500",
-                        )}
-                      >
-                        {passwordStrength === "weak" && "Password is too weak. Use at least 6 characters."}
-                        {passwordStrength === "medium" && "Medium strength. Add uppercase letters and numbers."}
-                        {passwordStrength === "strong" && "Strong password!"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={cn(
-                        confirmPassword && passwordsMatch === false && "border-red-500",
-                        confirmPassword && passwordsMatch === true && "border-green-500",
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                    >
-                      {showConfirmPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                    </button>
-                  </div>
-                  {confirmPassword && passwordsMatch === false && (
-                    <p className="text-xs text-red-500">Passwords do not match</p>
-                  )}
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={handleEmailSignup}
-                  disabled={
-                    isLoading || !emailValid || !usernameValid || passwordStrength === "weak" || !passwordsMatch
-                  }
-                >
-                  {isLoading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-                  ) : (
-                    "Create Account"
-                  )}
-                </Button>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-gray-500">or</span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 border-2 py-6"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-                ) : (
-                  <img src="/google-logo.png" alt="Google" className="h-5 w-5" />
-                )}
-                <span>Sign up with Google</span>
-              </Button>
-
-              <p className="text-center text-sm text-gray-500">
-                Already have an account?{" "}
-                <button className="text-blue-600 hover:underline" onClick={() => setActiveTab("login")}>
-                  Log in
-                </button>
-              </p>
-            </TabsContent>
-          </Tabs>
-
-          <div className="mt-4 text-center text-xs text-gray-500">
-            By continuing, you agree to Uber's{" "}
-            <a href="#" className="underline">
-              Terms & Conditions
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline">
-              Privacy Policy
-            </a>
+        <form onSubmit={handleLogin} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Log in"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
