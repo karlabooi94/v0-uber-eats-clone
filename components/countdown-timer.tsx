@@ -28,10 +28,18 @@ export function CountdownTimer({ seconds, onComplete, className }: CountdownTime
   // Calculate percentage for progress bar
   const progressPercentage = (timeLeft / seconds) * 100
 
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }
+
   return (
     <div className={cn("flex flex-col items-center", className)}>
       <div className="mb-1 text-sm font-medium">
-        Proceeding to payment in <span className="font-bold">{timeLeft}</span> seconds
+        Proceeding to payment in <span className="font-bold">{formatTime(timeLeft)}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
         <div

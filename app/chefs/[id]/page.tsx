@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Star, MapPin, Clock, Mail, Phone } from "lucide-react"
@@ -10,6 +12,13 @@ import OrderSidebar from "@/components/order-sidebar"
 import CategorizedMenu from "@/components/categorized-menu"
 import ChefContactButton from "@/components/chef-contact-button"
 import ChefBookingButton from "@/components/chef-booking-button"
+import { useOrder } from "@/hooks/use-order"
+import { useEffect, useState } from "react"
+
+// Constants
+const MINIMUM_PEOPLE = 2
+const MAXIMUM_PEOPLE = 8
+const PRICE_PER_PERSON = 80
 
 export default function ChefProfilePage({
   params,
@@ -18,12 +27,32 @@ export default function ChefProfilePage({
   params: { id: string }
   searchParams: { cuisine?: string }
 }) {
+  const { items } = useOrder()
+  const [currentPeopleCount, setCurrentPeopleCount] = useState(MINIMUM_PEOPLE)
+
   // Find the chef by ID
   const chef = chefs.find((c) => c.id === params.id) || chefs.find((c) => c.id === "dylan")
 
   if (!chef) {
     notFound()
   }
+
+  // Get the current people count from the order
+  useEffect(() => {
+    const mealPackage = items.find((item) => item.id === "mp1")
+    const mainDish = items.find((item) => item.courseType === "main" && !item.isCustomization)
+
+    // Determine the current people count from either the meal package or main dish
+    let peopleCount = MINIMUM_PEOPLE
+
+    if (mealPackage && mealPackage.quantity) {
+      peopleCount = Math.max(mealPackage.quantity, MINIMUM_PEOPLE)
+    } else if (mainDish && mainDish.quantity) {
+      peopleCount = Math.max(mainDish.quantity, MINIMUM_PEOPLE)
+    }
+
+    setCurrentPeopleCount(peopleCount)
+  }, [items])
 
   const isDylan = chef.id === "dylan"
   const showIndianCuisine = isDylan && (searchParams.cuisine === "indian" || !searchParams.cuisine)
@@ -105,7 +134,7 @@ export default function ChefProfilePage({
 
               {isDylan && (
                 <TabsContent value="indian" className="mt-0">
-                  <IndianMenu />
+                  <IndianMenu initialPeopleCount={currentPeopleCount} />
                 </TabsContent>
               )}
 
@@ -195,7 +224,12 @@ export default function ChefProfilePage({
 
           {/* Sidebar */}
           <div className="md:col-span-1">
-            <OrderSidebar chef={chef} />
+            <OrderSidebar
+              chef={chef}
+              initialPeopleCount={currentPeopleCount}
+              maxPeopleCount={MAXIMUM_PEOPLE}
+              pricePerPerson={PRICE_PER_PERSON}
+            />
 
             <div className="mt-6 rounded-lg border bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-bold">About Chef {chef.name}</h2>

@@ -10,7 +10,14 @@ import DishCarouselWithAddOns from "./dish-carousel-with-addons"
 import DynamicCheckoutButton from "./dynamic-checkout-button"
 import { indianDinner, mealPackages } from "@/data/menu-items"
 import { OptimizedImage } from "./ui/optimized-image"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -34,7 +41,8 @@ const getDishImage = (dishName) => {
   return DISH_IMAGES[dishName] || `/placeholder.svg?height=400&width=400&query=${encodeURIComponent(dishName)}`
 }
 
-export default function IndianMenu() {
+// Add a prop for initialPeopleCount to the component
+export default function IndianMenu({ initialPeopleCount = MINIMUM_PEOPLE }) {
   // Ensure we have valid data for each category
   const appetizers = indianDinner.filter((item) => item.name === "Vegetable Pakora") || []
   const mainCourses =
@@ -46,13 +54,30 @@ export default function IndianMenu() {
   const { addToOrder, items } = useOrder()
   const { showToast } = useToast()
   const router = useRouter()
-  const [peopleCount, setPeopleCount] = useState(MINIMUM_PEOPLE)
+
+  // Initialize peopleCount with the value from props, ensuring it's at least MINIMUM_PEOPLE
+  const [peopleCount, setPeopleCount] = useState(Math.max(initialPeopleCount, MINIMUM_PEOPLE))
+
+  // Update peopleCount when initialPeopleCount changes
+  useEffect(() => {
+    setPeopleCount(Math.max(initialPeopleCount, MINIMUM_PEOPLE))
+  }, [initialPeopleCount])
 
   // Check if this meal is already in the order
   const isInOrder = items.some((item) => item.id === "mp1")
+  const mealPackage = items.find((item) => item.id === "mp1")
+
+  // Sync peopleCount with the order quantity if the meal is already in the order
+  useEffect(() => {
+    if (isInOrder && mealPackage?.quantity) {
+      setPeopleCount(mealPackage.quantity)
+    }
+  }, [isInOrder, mealPackage])
 
   const [showSelectionModal, setShowSelectionModal] = useState(false)
   const [specialInstructions, setSpecialInstructions] = useState("")
+  const [showPeopleAdjustmentDialog, setShowPeopleAdjustmentDialog] = useState(false)
+  const [categoryToAdjust, setCategoryToAdjust] = useState("")
 
   // Initialize dish quantities - set defaults based on category
   const initializeDishQuantities = () => {
@@ -137,6 +162,20 @@ export default function IndianMenu() {
   // Update quantity for a specific dish
   const updateDishQuantity = (category, itemId, newQuantity) => {
     const categoryQuantities = { ...dishQuantities[category] }
+    const oldQuantity = categoryQuantities[itemId] || 0
+
+    // Calculate what the new total would be for this category
+    const currentTotal = Object.values(categoryQuantities).reduce((sum, qty) => sum + (qty as number), 0)
+    const totalAfterChange = currentTotal - oldQuantity + Math.max(0, newQuantity)
+
+    // If increasing and would exceed people count, show dialog
+    if (newQuantity > oldQuantity && totalAfterChange > peopleCount) {
+      setCategoryToAdjust(category)
+      setShowPeopleAdjustmentDialog(true)
+      return
+    }
+
+    // Otherwise proceed with the update
     categoryQuantities[itemId] = Math.max(0, newQuantity)
 
     setDishQuantities({
@@ -218,6 +257,7 @@ export default function IndianMenu() {
     }
   }
 
+  // Calculate the total price based on the current people count
   const totalPrice = PRICE_PER_PERSON * peopleCount
 
   return (
@@ -304,7 +344,7 @@ export default function IndianMenu() {
               ) : (
                 <>
                   <PlusCircle className="mr-2 h-5 w-5" />
-                  Add for {peopleCount} people
+                  Add for {peopleCount} people - ${totalPrice.toFixed(2)}
                 </>
               )}
             </Button>
@@ -390,7 +430,7 @@ export default function IndianMenu() {
 
       {/* Simplified Selection Modal - Only shown when there are multiple options */}
       <Dialog open={showSelectionModal} onOpenChange={setShowSelectionModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">Select Your Meal Options for {peopleCount} People</DialogTitle>
           </DialogHeader>
@@ -443,6 +483,9 @@ export default function IndianMenu() {
                   <p className="mt-1 text-sm text-blue-600">
                     You can select different options for each person. Make sure the total quantity for each category
                     equals {peopleCount}.
+                  </p>
+                  <p className="mt-1 text-sm text-blue-600">
+                    <strong>Scroll down</strong> to see all options and the "Add to Order" button at the bottom.
                   </p>
                 </div>
               </div>
@@ -828,7 +871,7 @@ export default function IndianMenu() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sticky bottom-0 bg-white pt-2 border-t">
             <Button variant="outline" onClick={() => setShowSelectionModal(false)}>
               Cancel
             </Button>
@@ -866,6 +909,61 @@ export default function IndianMenu() {
               ) : (
                 `Add for ${peopleCount} people - $${totalPrice.toFixed(2)}`
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Floating Add to Order button */}
+      {!showSelectionModal && (
+        <div className="fixed bottom-4 right-4 z-10">
+          <Button onClick={handleAddToOrder} className="bg-black hover:bg-black/90 shadow-lg" size="lg">
+            <PlusCircle className="mr-2 h-5 w-5" />
+            Add to Order
+          </Button>
+        </div>
+      )}
+      {/* People Adjustment Dialog */}
+      <Dialog open={showPeopleAdjustmentDialog} onOpenChange={setShowPeopleAdjustmentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Number of People</DialogTitle>
+            <DialogDescription>
+              You've selected the maximum number of items for {peopleCount} {peopleCount === 1 ? "person" : "people"}.
+              Would you like to increase the number of people?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-center gap-4 py-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPeopleCount(Math.max(MINIMUM_PEOPLE, peopleCount - 1))}
+              disabled={peopleCount <= MINIMUM_PEOPLE}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <div className="w-16 text-center text-2xl font-medium">{peopleCount}</div>
+            <Button variant="outline" size="icon" onClick={() => setPeopleCount(peopleCount + 1)}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="text-center text-sm text-gray-500">
+            ${PRICE_PER_PERSON.toFixed(2)} per person × {peopleCount} = ${(PRICE_PER_PERSON * peopleCount).toFixed(2)}
+          </div>
+
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" onClick={() => setShowPeopleAdjustmentDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setPeopleCount(peopleCount + 1)
+                setShowPeopleAdjustmentDialog(false)
+              }}
+              className="bg-black hover:bg-black/90"
+            >
+              Increase to {peopleCount + 1} People
             </Button>
           </DialogFooter>
         </DialogContent>

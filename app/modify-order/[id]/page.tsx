@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Save, Plus, Minus, Trash2, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Save, Plus, Minus, Trash2, AlertTriangle, Edit, CreditCard } from "lucide-react"
 import UserHeader from "@/components/user-header"
 import { toast } from "@/hooks/use-toast"
 import { OptimizedImage } from "@/components/ui/optimized-image"
@@ -18,6 +18,35 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { format } from "date-fns"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+// Course options for customization
+const COURSE_OPTIONS = {
+  appetizers: [
+    { id: "veg-pakora", name: "Vegetable Pakora", image: "/meals/vegetable-pakora-deluxe.png" },
+    { id: "samosa", name: "Samosa", image: "/meals/vegetable-pakora-1.png" },
+    { id: "onion-bhaji", name: "Onion Bhaji", image: "/meals/vegetable-pakora-2.png" },
+  ],
+  mains: [
+    { id: "chicken-biryani", name: "Chicken Biryani", image: "/meals/chicken-biryani-deluxe.png" },
+    { id: "tandoori-chicken", name: "Tandoori Chicken", image: "/meals/tandoori-chicken-platter-deluxe.png" },
+    { id: "butter-chicken", name: "Butter Chicken", image: "/meals/chicken-biryani-2.png" },
+  ],
+  sides: [
+    { id: "garlic-naan", name: "Garlic Naan", image: "/meals/garlic-naan-deluxe.png" },
+    { id: "plain-naan", name: "Plain Naan", image: "/meals/garlic-naan-1.png" },
+    { id: "rice", name: "Basmati Rice", image: "/meals/garlic-naan-2.png" },
+  ],
+  desserts: [
+    { id: "gulab-jamun", name: "Gulab Jamun", image: "/meals/gulab-jamun-deluxe.png" },
+    { id: "kheer", name: "Rice Kheer", image: "/meals/gulab-jamun-1.png" },
+    { id: "rasmalai", name: "Rasmalai", image: "/meals/gulab-jamun-2.png" },
+  ],
+}
 
 export default function ModifyOrderPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -27,37 +56,77 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
   const [saving, setSaving] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelling, setCancelling] = useState(false)
-  const [isWithin24Hours, setIsWithin24Hours] = useState(false)
-  const [chefId, setChefId] = useState<string | null>(null)
+  const [showCustomizeDialog, setShowCustomizeDialog] = useState(false)
+  const [currentItem, setCurrentItem] = useState<any>(null)
+  const [customizations, setCustomizations] = useState<any>({
+    appetizer: "",
+    mainCourse: "",
+    side: "",
+    dessert: "",
+    spiceLevel: "medium",
+    specialInstructions: "",
+  })
 
   useEffect(() => {
     // Get order details from localStorage
     const storedOrder = localStorage.getItem("lastOrder")
+
     if (storedOrder) {
       try {
         const parsedOrder = JSON.parse(storedOrder)
         setOrderDetails(parsedOrder)
         setModifiedItems(parsedOrder.items || [])
-
-        // Check if order is within 24 hours
-        if (parsedOrder.orderDate) {
-          const orderDate = new Date(parsedOrder.orderDate)
-          const now = new Date()
-          const hoursDiff = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60)
-          setIsWithin24Hours(hoursDiff <= 24)
-        }
-
-        // Extract chef ID from the first item
-        if (parsedOrder.items && parsedOrder.items.length > 0) {
-          setChefId(parsedOrder.items[0].chefId || "dylan")
-        }
       } catch (error) {
         console.error("Error parsing order details:", error)
+        // Create a fallback order if there's an error
+        createFallbackOrder()
       }
+    } else {
+      // Create a fallback order if no order exists
+      createFallbackOrder()
     }
 
+    // Always set loading to false after attempting to load
     setLoading(false)
   }, [])
+
+  const createFallbackOrder = () => {
+    // Create a sample order for testing/demo purposes
+    const fallbackOrder = {
+      id: params.id || "sample-123",
+      orderDate: new Date().toISOString(),
+      items: [
+        {
+          id: "indian-meal-1",
+          name: "Indian Fusion Meal",
+          image: "/meals/indian-fusion-deluxe.png",
+          quantity: 2,
+          basePrice: 80,
+          chefId: "dylan",
+          appetizer: "Vegetable Pakora",
+          mainCourse: "Chicken Biryani",
+          side: "Garlic Naan",
+          dessert: "Gulab Jamun",
+          spiceLevel: "medium",
+          specialInstructions: "",
+        },
+      ],
+      subtotal: 160,
+      tax: 19.2,
+      serviceCharge: 0,
+      deliveryFee: 0,
+      total: 179.2,
+      address: "123 Main St, Vancouver, BC",
+      serviceType: "delivery",
+      deliveryDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"), // 7 days from now
+      deliveryTime: "18:00",
+      paymentMethod: "credit-card",
+    }
+
+    setOrderDetails(fallbackOrder)
+    setModifiedItems(fallbackOrder.items)
+    localStorage.setItem("lastOrder", JSON.stringify(fallbackOrder))
+  }
 
   const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return
@@ -69,6 +138,45 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
 
   const handleRemoveItem = (itemId: string) => {
     setModifiedItems((prevItems) => prevItems.filter((item) => item.id !== itemId))
+  }
+
+  const handleCustomizeItem = (item: any) => {
+    setCurrentItem(item)
+    setCustomizations({
+      appetizer: item.appetizer || "",
+      mainCourse: item.mainCourse || "",
+      side: item.side || "",
+      dessert: item.dessert || "",
+      spiceLevel: item.spiceLevel || "medium",
+      specialInstructions: item.specialInstructions || "",
+    })
+    setShowCustomizeDialog(true)
+  }
+
+  const handleSaveCustomizations = () => {
+    if (!currentItem) return
+
+    setModifiedItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === currentItem.id
+          ? {
+              ...item,
+              appetizer: customizations.appetizer,
+              mainCourse: customizations.mainCourse,
+              side: customizations.side,
+              dessert: customizations.dessert,
+              spiceLevel: customizations.spiceLevel,
+              specialInstructions: customizations.specialInstructions,
+            }
+          : item,
+      ),
+    )
+
+    setShowCustomizeDialog(false)
+    toast({
+      title: "Customizations saved",
+      description: "Your meal customizations have been updated.",
+    })
   }
 
   const calculateSubtotal = () => {
@@ -161,7 +269,7 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
     }
   }
 
-  if (loading || !orderDetails) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <UserHeader />
@@ -169,6 +277,36 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
           <div className="text-center">
             <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-black"></div>
             <p className="text-lg font-medium">Loading order details...</p>
+            <p className="mt-4 text-sm text-gray-500">
+              If loading takes too long, please{" "}
+              <button onClick={createFallbackOrder} className="text-blue-500 underline">
+                click here
+              </button>{" "}
+              to continue with a sample order.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!orderDetails) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <UserHeader />
+        <div className="flex h-[80vh] items-center justify-center">
+          <div className="text-center max-w-md px-4">
+            <div className="mb-4 text-amber-500">
+              <AlertTriangle size={48} className="mx-auto" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">No Order Found</h2>
+            <p className="mb-6">We couldn't find your order details. Would you like to continue with a sample order?</p>
+            <Button onClick={createFallbackOrder}>Continue with Sample Order</Button>
+            <div className="mt-4">
+              <Link href="/thank-you" className="text-sm text-gray-500 hover:text-gray-700">
+                Return to Previous Page
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -197,15 +335,13 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
             <h1 className="text-2xl font-bold">Modify Order #{params.id}</h1>
           </div>
           <div className="flex gap-2">
-            {isWithin24Hours && (
-              <Button
-                variant="outline"
-                onClick={() => setShowCancelDialog(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-              >
-                Cancel Order
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelDialog(true)}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            >
+              Cancel Order
+            </Button>
             <Button onClick={handleSaveChanges} disabled={saving || modifiedItems.length === 0}>
               {saving ? (
                 <>
@@ -222,29 +358,19 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
-        {isWithin24Hours ? (
-          <div className="mb-6 rounded-lg bg-blue-50 p-4 text-blue-800">
-            <p className="flex items-center">
-              <span className="mr-2 rounded-full bg-blue-100 p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              You can modify or cancel this order as it was placed within the last 24 hours.
-            </p>
+        {/* Payment Notice */}
+        <div className="mb-6 rounded-lg bg-green-50 p-4 border border-green-200">
+          <div className="flex items-start gap-3">
+            <CreditCard className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
+            <div>
+              <h3 className="font-medium text-green-800">Your card will NOT be charged until the day of your meal</h3>
+              <p className="mt-1 text-sm text-green-700">
+                Feel free to customize your order as needed. You can modify your order anytime before the scheduled
+                delivery date.
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="mb-6 rounded-lg bg-yellow-50 p-4 text-yellow-800">
-            <p className="flex items-center">
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              This order was placed more than 24 hours ago. Some modifications may be limited.
-            </p>
-          </div>
-        )}
+        </div>
 
         <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
@@ -280,107 +406,190 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
           <Separator className="my-6" />
 
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Order Items</h2>
-            {chefId && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/chefs/${chefId}`}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  Add New Item
-                </Link>
-              </Button>
-            )}
+            <h2 className="text-lg font-semibold">Your Meal Items</h2>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/chefs/dylan`}>
+                <Plus className="mr-1 h-4 w-4" />
+                Add New Item
+              </Link>
+            </Button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {modifiedItems.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <p className="text-gray-500">Your order is empty. Add items to continue.</p>
               </div>
             ) : (
               modifiedItems.map((item) => (
-                <div key={item.id} className="flex items-start gap-4 rounded-lg border p-4">
-                  <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
-                    <OptimizedImage
-                      src={item.image || "/placeholder.svg?height=96&width=96&query=food"}
-                      alt={item.name || "Food item"}
-                      width={96}
-                      height={96}
-                      className="h-full w-full object-cover"
-                    />
+                <div key={item.id} className="rounded-lg border p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md">
+                      <OptimizedImage
+                        src={item.image || "/placeholder.svg?height=96&width=96&query=food"}
+                        alt={item.name || "Food item"}
+                        width={96}
+                        height={96}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <h3 className="font-medium">{item.name || "Food item"}</h3>
+                        <p className="font-medium">
+                          ${((item.basePrice || 0) * (item.quantity || 1) + (item.addOnsPrice || 0)).toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">Quantity</h4>
+                          <div className="mt-1 flex items-center">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => handleUpdateQuantity(item.id, Math.max(1, (item.quantity || 1) - 1))}
+                              disabled={(item.quantity || 1) <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="mx-3 w-5 text-center">{item.quantity || 1}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => handleUpdateQuantity(item.id, (item.quantity || 1) + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-1"
+                            onClick={() => handleCustomizeItem(item)}
+                          >
+                            <Edit className="mr-1 h-4 w-4" />
+                            Customize Meal
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">{item.name || "Food item"}</h3>
-                      <p className="font-medium">
-                        ${((item.basePrice || 0) * (item.quantity || 1) + (item.addOnsPrice || 0)).toFixed(2)}
-                      </p>
-                    </div>
 
-                    {/* Show meal components if available */}
-                    {(item.appetizer || item.mainCourse || item.side || item.dessert) && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <p className="font-medium">Includes:</p>
-                        <ul className="ml-4 list-disc">
-                          {item.appetizer && <li>{item.appetizer}</li>}
-                          {item.mainCourse && <li>{item.mainCourse}</li>}
-                          {item.side && <li>{item.side}</li>}
-                          {item.dessert && <li>{item.dessert}</li>}
-                        </ul>
+                  {/* Course Preview */}
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {item.appetizer && (
+                      <div className="rounded-md border p-2 bg-gray-50">
+                        <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                          <OptimizedImage
+                            src={
+                              COURSE_OPTIONS.appetizers.find((a) => a.name === item.appetizer)?.image ||
+                              "/meals/vegetable-pakora-deluxe.png"
+                            }
+                            alt={item.appetizer}
+                            width={80}
+                            height={80}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-gray-500">Appetizer:</span>
+                          <p className="font-medium truncate">{item.appetizer}</p>
+                        </div>
                       </div>
                     )}
-
-                    {/* Show add-ons if available */}
-                    {item.addOns && item.addOns.length > 0 && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <p className="font-medium">Add-ons:</p>
-                        <ul className="ml-4 list-disc">
-                          {item.addOns.map((addon: any, index: number) => (
-                            <li key={index}>
-                              {addon.name} (+${addon.price?.toFixed(2) || "0.00"})
-                            </li>
-                          ))}
-                        </ul>
+                    {item.mainCourse && (
+                      <div className="rounded-md border p-2 bg-gray-50">
+                        <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                          <OptimizedImage
+                            src={
+                              COURSE_OPTIONS.mains.find((m) => m.name === item.mainCourse)?.image ||
+                              "/meals/chicken-biryani-deluxe.png"
+                            }
+                            alt={item.mainCourse}
+                            width={80}
+                            height={80}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-gray-500">Main:</span>
+                          <p className="font-medium truncate">{item.mainCourse}</p>
+                        </div>
                       </div>
                     )}
+                    {item.side && (
+                      <div className="rounded-md border p-2 bg-gray-50">
+                        <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                          <OptimizedImage
+                            src={
+                              COURSE_OPTIONS.sides.find((s) => s.name === item.side)?.image ||
+                              "/meals/garlic-naan-deluxe.png"
+                            }
+                            alt={item.side}
+                            width={80}
+                            height={80}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-gray-500">Side:</span>
+                          <p className="font-medium truncate">{item.side}</p>
+                        </div>
+                      </div>
+                    )}
+                    {item.dessert && (
+                      <div className="rounded-md border p-2 bg-gray-50">
+                        <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                          <OptimizedImage
+                            src={
+                              COURSE_OPTIONS.desserts.find((d) => d.name === item.dessert)?.image ||
+                              "/meals/gulab-jamun-deluxe.png"
+                            }
+                            alt={item.dessert}
+                            width={80}
+                            height={80}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-gray-500">Dessert:</span>
+                          <p className="font-medium truncate">{item.dessert}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Additional Details */}
+                  <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                    {item.spiceLevel && (
+                      <div>
+                        <span className="font-medium">Spice Level:</span>{" "}
+                        {item.spiceLevel.charAt(0).toUpperCase() + item.spiceLevel.slice(1)}
+                      </div>
+                    )}
                     {item.specialInstructions && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <p className="font-medium">Special Instructions:</p>
-                        <p className="italic">{item.specialInstructions}</p>
+                      <div className="w-full">
+                        <span className="font-medium">Special Instructions:</span>
+                        <p className="mt-1 italic text-gray-600">{item.specialInstructions}</p>
                       </div>
                     )}
+                  </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 rounded-full"
-                          onClick={() => handleUpdateQuantity(item.id, Math.max(1, (item.quantity || 1) - 1))}
-                          disabled={(item.quantity || 1) <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="mx-3 w-5 text-center">{item.quantity || 1}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 rounded-full"
-                          onClick={() => handleUpdateQuantity(item.id, (item.quantity || 1) + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => handleRemoveItem(item.id)}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Remove
-                      </Button>
-                    </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => handleRemoveItem(item.id)}
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
               ))
@@ -415,6 +624,9 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
                 <span>Total</span>
                 <span>${total.toFixed(2)}</span>
               </div>
+              <p className="mt-1 text-sm text-gray-500 italic">
+                Your card will not be charged until the day of your meal.
+              </p>
             </div>
           </div>
 
@@ -442,6 +654,193 @@ export default function ModifyOrderPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </div>
+
+      {/* Customize Meal Dialog */}
+      <Dialog open={showCustomizeDialog} onOpenChange={setShowCustomizeDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customize Your Meal</DialogTitle>
+            <DialogDescription>Personalize each course of your meal according to your preferences.</DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="appetizer" className="mt-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="appetizer">Appetizer</TabsTrigger>
+              <TabsTrigger value="main">Main Course</TabsTrigger>
+              <TabsTrigger value="side">Side</TabsTrigger>
+              <TabsTrigger value="dessert">Dessert</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="appetizer" className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {COURSE_OPTIONS.appetizers.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                      customizations.appetizer === option.name ? "border-blue-500 bg-blue-50" : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setCustomizations({ ...customizations, appetizer: option.name })}
+                  >
+                    <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                      <OptimizedImage
+                        src={option.image}
+                        alt={option.name}
+                        width={120}
+                        height={120}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <RadioGroup value={customizations.appetizer === option.name ? "selected" : ""} className="mr-2">
+                        <RadioGroupItem value="selected" id={`appetizer-${option.id}`} />
+                      </RadioGroup>
+                      <Label htmlFor={`appetizer-${option.id}`} className="font-medium">
+                        {option.name}
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="main" className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {COURSE_OPTIONS.mains.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                      customizations.mainCourse === option.name ? "border-blue-500 bg-blue-50" : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setCustomizations({ ...customizations, mainCourse: option.name })}
+                  >
+                    <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                      <OptimizedImage
+                        src={option.image}
+                        alt={option.name}
+                        width={120}
+                        height={120}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <RadioGroup value={customizations.mainCourse === option.name ? "selected" : ""} className="mr-2">
+                        <RadioGroupItem value="selected" id={`main-${option.id}`} />
+                      </RadioGroup>
+                      <Label htmlFor={`main-${option.id}`} className="font-medium">
+                        {option.name}
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <Label htmlFor="spice-level" className="mb-2 block font-medium">
+                  Spice Level
+                </Label>
+                <Select
+                  value={customizations.spiceLevel}
+                  onValueChange={(value) => setCustomizations({ ...customizations, spiceLevel: value })}
+                >
+                  <SelectTrigger id="spice-level">
+                    <SelectValue placeholder="Select spice level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mild">Mild</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hot">Hot</SelectItem>
+                    <SelectItem value="extra-hot">Extra Hot</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="side" className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {COURSE_OPTIONS.sides.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                      customizations.side === option.name ? "border-blue-500 bg-blue-50" : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setCustomizations({ ...customizations, side: option.name })}
+                  >
+                    <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                      <OptimizedImage
+                        src={option.image}
+                        alt={option.name}
+                        width={120}
+                        height={120}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <RadioGroup value={customizations.side === option.name ? "selected" : ""} className="mr-2">
+                        <RadioGroupItem value="selected" id={`side-${option.id}`} />
+                      </RadioGroup>
+                      <Label htmlFor={`side-${option.id}`} className="font-medium">
+                        {option.name}
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="dessert" className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {COURSE_OPTIONS.desserts.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                      customizations.dessert === option.name ? "border-blue-500 bg-blue-50" : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setCustomizations({ ...customizations, dessert: option.name })}
+                  >
+                    <div className="aspect-square w-full overflow-hidden rounded-md mb-2">
+                      <OptimizedImage
+                        src={option.image}
+                        alt={option.name}
+                        width={120}
+                        height={120}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <RadioGroup value={customizations.dessert === option.name ? "selected" : ""} className="mr-2">
+                        <RadioGroupItem value="selected" id={`dessert-${option.id}`} />
+                      </RadioGroup>
+                      <Label htmlFor={`dessert-${option.id}`} className="font-medium">
+                        {option.name}
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6">
+            <Label htmlFor="special-instructions" className="mb-2 block font-medium">
+              Special Instructions
+            </Label>
+            <Textarea
+              id="special-instructions"
+              placeholder="Any allergies, dietary restrictions, or preparation preferences?"
+              value={customizations.specialInstructions}
+              onChange={(e) => setCustomizations({ ...customizations, specialInstructions: e.target.value })}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setShowCustomizeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCustomizations}>Save Customizations</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Order Confirmation Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
