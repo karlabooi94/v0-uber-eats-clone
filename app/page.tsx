@@ -1,60 +1,79 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import AddressSearchForm from "@/components/address-search-form"
-import LoginModal from "@/components/login-modal"
+import TableForTwoHeader from "@/components/table-for-two-header"
 import { chefs } from "@/data/chefs"
 import { ArrowRight } from "lucide-react"
 
 export default function HomePage() {
+  // Animation states
+  const [showContent, setShowContent] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  // Trigger animations on component mount
+  useEffect(() => {
+    // Show content with a slight delay after page load
+    const contentTimer = setTimeout(() => setShowContent(true), 400)
+
+    // Preload the banner image
+    const img = new Image()
+    img.src = "/table-for-two-banner.png"
+    img.onload = () => setImageLoaded(true)
+
+    return () => {
+      clearTimeout(contentTimer)
+    }
+  }, [])
+
   // Ensure chefs is defined and has a fallback empty array
   const safeChefs = chefs || []
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Background Image - Vancouver Skyline */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/vancouver-skyline.png"
-          alt="Vancouver skyline with mountains in the background"
-          className="h-full w-full object-cover brightness-[0.85] filter"
-        />
+      <TableForTwoHeader />
+
+      {/* Background Image - Table for Two */}
+      <div className="absolute inset-0 z-0 bg-gray-900">
+        {/* Show a loading state until the image is loaded */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-1000 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+        >
+          <img
+            src="/table-for-two-banner.png"
+            alt="Romantic dinner table for two with city view"
+            className="h-full w-full object-cover"
+            onLoad={() => setImageLoaded(true)}
+          />
+        </div>
         {/* Semi-opaque overlay for better contrast */}
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
 
       {/* Content Overlay */}
       <div className="relative z-10 flex min-h-screen flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between p-5 md:p-6">
-          <Link href="/" className="flex items-center text-2xl font-bold text-white">
-            <span>Vancouver Chef Connect</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <LoginModal>
-              <Button variant="outline" className="border-2 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20">
-                Log in
-              </Button>
-            </LoginModal>
-            <Button className="bg-white text-black hover:bg-white/90">Sign up</Button>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex flex-1 flex-col items-start justify-center px-6 pb-20 pt-10 md:px-8 lg:px-10">
-          <div className="max-w-3xl">
+        {/* Main Content - Adjusted to account for sticky header */}
+        <main className="flex flex-1 flex-col items-start justify-center px-6 pb-20 pt-24 md:px-8 lg:px-10">
+          <div
+            className={`max-w-3xl transition-all duration-1000 ease-out ${
+              showContent ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+          >
             <h1 className="mb-4 text-4xl font-bold text-white sm:text-5xl md:text-6xl">
-              Discover Vancouver's Finest Culinary Experiences
+              Intimate Dining Experiences at Home
             </h1>
             <p className="mb-10 text-xl text-white/90">
-              Enjoy curated 4-course meals from Vancouver's celebrated chefs, delivered to your door or prepared in your
-              home.
+              Enjoy curated 4-course meals from Vancouver's celebrated chefs, prepared in your home for a perfect
+              evening.
             </p>
 
             <div className="w-full max-w-2xl">
-              <AddressSearchForm defaultAddress="3437 W 2nd Avenue" />
+              <AddressSearchForm defaultAddress="" />
 
               <div className="mt-6 text-sm text-white/90">
-                <span className="mr-1">All meals are $80 per person, including delivery.</span>
+                <span className="mr-1">All meals are $80 per person, with a minimum of 2 people.</span>
               </div>
             </div>
           </div>
@@ -76,13 +95,13 @@ export default function HomePage() {
                   key={chef.id}
                   className="overflow-hidden rounded-lg border shadow-sm transition-all hover:shadow-md"
                 >
-                  <Link href={`/chefs/${chef.id}`} className="block aspect-[4/3] w-full overflow-hidden cursor-pointer">
+                  <div className="aspect-[4/3] w-full overflow-hidden">
                     <img
                       src={chef.image || "/placeholder.svg"}
                       alt={chef.name}
-                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                      className="h-full w-full object-cover"
                     />
-                  </Link>
+                  </div>
                   <div className="p-6">
                     <h3 className="mb-2 text-xl font-bold">{chef.name}</h3>
                     <p className="mb-2 text-gray-600">{chef.cuisine}</p>
