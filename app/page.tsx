@@ -76,13 +76,13 @@ export default function HomePage() {
                   key={chef.id}
                   className="overflow-hidden rounded-lg border shadow-sm transition-all hover:shadow-md"
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden">
+                  <Link href={`/chefs/${chef.id}`} className="block aspect-[4/3] w-full overflow-hidden cursor-pointer">
                     <img
                       src={chef.image || "/placeholder.svg"}
                       alt={chef.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                     />
-                  </div>
+                  </Link>
                   <div className="p-6">
                     <h3 className="mb-2 text-xl font-bold">{chef.name}</h3>
                     <p className="mb-2 text-gray-600">{chef.cuisine}</p>

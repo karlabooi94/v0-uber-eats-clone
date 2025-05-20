@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Star, MapPin, Clock, Mail, Phone } from "lucide-react"
+import { ArrowLeft, Star, MapPin, Clock, Mail, Phone, Award, GraduationCap, ThumbsUp } from "lucide-react"
 import { chefs } from "@/data/chefs"
 import UserHeader from "@/components/user-header"
 import { notFound } from "next/navigation"
@@ -74,9 +74,9 @@ export default function ChefProfilePage({
           {/* Cover Image */}
           <div className="relative h-48 w-full overflow-hidden md:h-64">
             <img
-              src={chef.coverImage || "/placeholder.svg?height=600&width=1200&query=chef kitchen"}
-              alt={`${chef.name}'s kitchen`}
-              className="h-full w-full object-cover"
+              src="/biryani-ingredients.png"
+              alt="Indian cuisine ingredients and biryani"
+              className="h-full w-full object-cover object-center"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           </div>
@@ -101,6 +101,28 @@ export default function ChefProfilePage({
                     <span className="ml-1 text-gray-500">(200+ ratings)</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Trust Signals */}
+              <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+                    <Award className="mr-1 h-4 w-4" />
+                    Top-rated Chef
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                    <GraduationCap className="mr-1 h-4 w-4" />
+                    Trained in Asia & North America
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700">
+                    <ThumbsUp className="mr-1 h-4 w-4" />
+                    15+ Years Experience
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Chef Dylan brings authentic flavors from his culinary training across Asia and North America,
+                  specializing in fusion cuisine that has earned him recognition throughout Vancouver.
+                </p>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-4">
