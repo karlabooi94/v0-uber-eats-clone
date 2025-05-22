@@ -5,8 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import DishCarouselWithAddOns from "./dish-carousel-with-addons"
 import DynamicCheckoutButton from "./dynamic-checkout-button"
 import { onePotMeals, indianDinner, cantoneseDinner, bbqDinner, italianDinner, mealPackages } from "@/data/menu-items"
+import type { MenuItem } from "@/types/menu"
 
-export default function CategorizedMenu() {
+interface CategorizedMenuProps {
+  onDishSelect?: (dish: MenuItem) => void
+}
+
+export default function CategorizedMenu({ onDishSelect }: CategorizedMenuProps) {
   const [activeTab, setActiveTab] = useState("all")
 
   return (
@@ -36,36 +41,42 @@ export default function CategorizedMenu() {
             title="Complete Dinner Experiences"
             description="Full multi-course meals for four people"
             items={mealPackages}
+            onDishSelect={onDishSelect}
           />
 
           <DishCarouselWithAddOns
             title="One Pot Family Meals"
             description="Quick and easy meals perfect for busy weeknights"
             items={onePotMeals}
+            onDishSelect={onDishSelect}
           />
 
           <DishCarouselWithAddOns
             title="Indian Cuisine"
             description="Authentic Indian dishes with Chef Dylan's signature twist"
             items={indianDinner}
+            onDishSelect={onDishSelect}
           />
 
           <DishCarouselWithAddOns
             title="Cantonese Cuisine"
             description="Traditional Cantonese dishes with premium ingredients"
             items={cantoneseDinner}
+            onDishSelect={onDishSelect}
           />
 
           <DishCarouselWithAddOns
             title="Backyard BBQ"
             description="Classic American BBQ favorites for the whole family"
             items={bbqDinner}
+            onDishSelect={onDishSelect}
           />
 
           <DishCarouselWithAddOns
             title="Italian Cuisine"
             description="Authentic Italian dishes made with imported ingredients"
             items={italianDinner}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -81,6 +92,7 @@ export default function CategorizedMenu() {
             title="One Pot Family Meals"
             description="Quick and easy meals perfect for busy weeknights"
             items={onePotMeals}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -96,6 +108,7 @@ export default function CategorizedMenu() {
             title="Complete Dinner Experiences"
             description="Full multi-course meals for four people"
             items={mealPackages}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -110,6 +123,7 @@ export default function CategorizedMenu() {
             title="Indian Cuisine"
             description="Authentic Indian dishes with Chef Dylan's signature twist"
             items={indianDinner}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -124,6 +138,7 @@ export default function CategorizedMenu() {
             title="Cantonese Cuisine"
             description="Traditional Cantonese dishes with premium ingredients"
             items={cantoneseDinner}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -138,6 +153,7 @@ export default function CategorizedMenu() {
             title="Backyard BBQ"
             description="Classic American BBQ favorites for the whole family"
             items={bbqDinner}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
 
@@ -152,6 +168,7 @@ export default function CategorizedMenu() {
             title="Italian Cuisine"
             description="Authentic Italian dishes made with imported ingredients"
             items={italianDinner}
+            onDishSelect={onDishSelect}
           />
         </TabsContent>
       </Tabs>

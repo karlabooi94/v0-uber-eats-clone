@@ -14,21 +14,21 @@ const inter = Inter({ subsets: ["latin"] })
 
 // Critical images that should be preloaded
 const criticalImages = [
-  "/table-for-two-hero.png",
   "/meals/indian-fusion.png",
   "/meals/chicken-biryani.png",
   "/meals/biryani-plate.png",
   "/indian-vegetable-pakora.png",
   "/uber-eats-logo.png",
   "/food-background.png",
+  "/vancouver-skyline.png",
   "/diverse-food-spread.png",
   "/chefs/chef-dylan-storey.png",
 ]
 
 export const metadata: Metadata = {
-  title: "Table for Two | Premium 4-Course Meals Delivered",
+  title: "Vancouver Chef Connect | Premium 4-Course Meals Delivered",
   description:
-    "Experience intimate dining at home with curated 4-course meals delivered to your door. Premium ingredients, local flavors, $80 per person.",
+    "Experience Vancouver's finest chefs with curated 4-course meals delivered to your door. Premium ingredients, local flavors, $80 per person.",
     generator: 'v0.dev'
 }
 

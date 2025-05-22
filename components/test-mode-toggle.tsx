@@ -1,14 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { AlertTriangle } from "lucide-react"
 
 export function TestModeToggle() {
-  const { isTestMode, toggleTestMode } = useAuth()
+  const { isTestMode, toggleTestMode, user, login, logout } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(!!user)
+
+  // Keep isLoggedIn state in sync with user state
+  useEffect(() => {
+    setIsLoggedIn(!!user)
+  }, [user])
+
+  // Handle login toggle
+  const handleLoginToggle = async (checked: boolean) => {
+    if (checked) {
+      // Simulate login with test credentials
+      await login("test@example.com", "password")
+    } else {
+      logout()
+    }
+  }
 
   return (
     <div className="fixed bottom-4 left-4 z-50">
@@ -22,7 +38,7 @@ export function TestModeToggle() {
         {isTestMode ? (
           <>
             <AlertTriangle className="mr-1 h-4 w-4" />
-            Test Mode
+            {user ? "Test Mode (Logged In)" : "Test Mode"}
           </>
         ) : (
           "Test Mode"
@@ -44,9 +60,21 @@ export function TestModeToggle() {
             </div>
 
             {isTestMode && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <div>Logged In</div>
+                  <div className="text-xs text-gray-500">Simulate logged in user</div>
+                </div>
+                <Switch checked={isLoggedIn} onCheckedChange={handleLoginToggle} />
+              </div>
+            )}
+
+            {isTestMode && user && (
               <div className="rounded-md bg-yellow-50 p-2 text-xs text-yellow-800">
                 <div className="font-medium">Test User Active:</div>
-                <div>Ben Booi (ben.booi@example.com)</div>
+                <div>
+                  {user.name} ({user.email})
+                </div>
               </div>
             )}
           </div>

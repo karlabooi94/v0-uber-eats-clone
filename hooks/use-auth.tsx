@@ -111,15 +111,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("testMode", value.toString())
 
     if (value) {
-      // Enable test mode - set test user
-      setUser(testUser)
+      // Enable test mode - set test user if not already logged in
+      if (!user) {
+        setUser(testUser)
+      }
     } else {
       // Disable test mode - restore normal auth state
-      const savedUser = localStorage.getItem("user")
-      if (savedUser) {
-        setUser(JSON.parse(savedUser))
-      } else {
+      // If we're using the test user, log out
+      if (user && user.id === testUser.id) {
         setUser(null)
+      } else {
+        // Otherwise keep the current user
+        const savedUser = localStorage.getItem("user")
+        if (savedUser) {
+          setUser(JSON.parse(savedUser))
+        } else {
+          setUser(null)
+        }
       }
     }
   }
